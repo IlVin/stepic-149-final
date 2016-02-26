@@ -50,6 +50,8 @@ class HTTPHandler {
             rb = new TBuffer();
             wb = new TBuffer();
 
+            is_finished = false;
+
             ev_init(w(rw_ctx), r_cb);
             ev_io_set(w(rw_ctx), sock, EV_READ);
             ev_io_start(loop, w(rw_ctx));
@@ -69,10 +71,10 @@ class HTTPHandler {
             int r = wb->snd(w->fd);
             if (r == 0 || r == -1) {
                 ev_io_stop(loop, w);
-                ioctx(w)->h->is_finished = true;
                 shutdown(w->fd, SHUT_RDWR);
                 close(w->fd);
-                free(w);
+                ioctx(w)->h->is_finished = true;
+                delete ioctx(w)->h;
             }
             return;
         }
@@ -85,7 +87,6 @@ class HTTPHandler {
 
             if (r > 0){
                 char ** p = rb->head();
-
                 // No multithreading
                 if (strstr(*p, "\n\n") != nullptr || strstr(*p, "\n\r\n") != nullptr) {
                     ev_io_stop(loop, w);
@@ -97,8 +98,6 @@ class HTTPHandler {
                     ev_io_set(w, w->fd, EV_WRITE);
                 } 
                 ev_io_start(loop, w);
-            } else {
-                free(w);
             }
             return;
         }

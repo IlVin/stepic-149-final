@@ -36,5 +36,6 @@ class TBuffer {
         void append(const std::string &str);
         int rcv(int fd, size_t sz);
         int snd(int fd);
+        char * c_str();
         std::string asString();
 };

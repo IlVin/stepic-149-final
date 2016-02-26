@@ -6,23 +6,20 @@
 
 
 class TRequest {
-    private:
-        TBuffer * rb;
     public:
         int status;
         char * path;
 
-        TRequest(TBuffer * rb_): rb(rb_) {
+        TRequest(TBuffer * rb) {
             path = nullptr;
-            if( parse() ) {
+            if( parse(rb) ) {
                 status = 0;
             } else {
                 status = -1;
             }
         }
         ~TRequest() {
-            delete path;
         }
 
-    bool parse();
+    bool parse(TBuffer * rb);
 };

@@ -42,20 +42,6 @@ void TServer::start() {
     ev_loop(loop, 0);
 
     return;
-};
-
-void TServer::close_handlers() {
-    for (std::list<HTTPHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++) {
-        delete *it;
-    }
-}
-
-void TServer::gc_handlers() {
-    for (std::list<HTTPHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++) {
-        if ((*it)->is_finished) {
-            handlers.remove(*it);
-        }
-    }
 }
 
 

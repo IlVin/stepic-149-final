@@ -37,9 +37,13 @@ void TBuffer::append(const std::string &str) {
     }
 };
 
-std::string TBuffer::asString() {
+char * TBuffer::c_str() {
     *tl = '\0';
-    return std::string(hd);
+    return hd;
+}
+
+std::string TBuffer::asString() {
+    return std::string(c_str());
 }
 
 int TBuffer::rcv(int fd, size_t sz) {

@@ -9,16 +9,11 @@ class TCGI {
     private:
         std::string folder;
 
-        TBuffer * rb;
-        TBuffer * wb;
-        TRequest * r;
-
     public:
         TCGI(std::string f): folder(f) {
         }
         ~TCGI() {
         }
 
-        void start(TBuffer * rb_, TBuffer * wb_);
-        void bad_request();
+        void start(TBuffer * rb, TBuffer * wb);
 };

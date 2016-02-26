@@ -11,20 +11,12 @@ std::string tbad = "400 Bad Request";
 std::string t200 = "HTTP/1.0 200 OK\r\nContent-length: %d\r\nConnection: close\r\nContent-Type: text/html\r\n\r\n%s";
 std::string t404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: text/html\r\n\r\n";
 
-void TCGI::bad_request() {
-    wb->append(tbad);
-}
-
-void TCGI::start(TBuffer * rb_, TBuffer * wb_) {
-    rb = rb_;
-    wb = wb_;
-    r = new TRequest(rb);
+void TCGI::start(TBuffer * rb, TBuffer * wb) {
+    TRequest * r = new TRequest(rb);
     if (r->status < 0) {
-        bad_request();
+        wb->append(tbad);
     } else {
-        std::string path = r->path;
-        std::string fpath = folder + path;
-
+        std::string fpath = folder + r->path;
         std::ifstream * f = new std::ifstream(fpath, std::ios::in );
         if (!f->is_open()) {
             wb->append(t404);
@@ -40,5 +32,6 @@ void TCGI::start(TBuffer * rb_, TBuffer * wb_) {
         delete f;
 
     }
+    delete r;
     return;
 }

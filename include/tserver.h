@@ -61,17 +61,14 @@ public:
         return (struct sig_context *) w;
     }
 
-    void close_handlers();
-
     virtual ~TServer() {
-        close_handlers();
         shutdown(sock, SHUT_RDWR);
         close(sock);
+        delete ctx_accept;
+        delete ctx_signal;
     }
 
     void start();
-
-    void gc_handlers();
 
     static void sig_cb(struct ev_loop *loop, struct ev_signal *w, int revent) {
         ev_signal_stop(ctx(w)->srv->loop, w);
@@ -80,8 +77,7 @@ public:
 
     static void io_accept_cb(struct ev_loop *loop, struct ev_io *w, int revent) {
         int client_sd = accept(w->fd, NULL, NULL);
-        ctx(w)->srv->gc_handlers();
-        ctx(w)->srv->handlers.push_back(new HTTPHandler(loop, client_sd, ctx(w)->srv->folder));
+        new HTTPHandler(loop, client_sd, ctx(w)->srv->folder);
     }
 
 
