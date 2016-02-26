@@ -13,6 +13,8 @@ std::string t404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: text/html\r\nContent
 
 void TCGI::start(TBuffer * rb, TBuffer * wb) {
     TRequest * r = new TRequest(rb);
+    std::ofstream log("/tmp/log.txt", std::ios::out | std::ios::app);
+    log << "REQ: " << rb->asString() << std::endl;
     if (r->status < 0) {
         wb->append(tbad);
     } else {

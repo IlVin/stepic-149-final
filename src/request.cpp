@@ -56,7 +56,6 @@ bool skip(char ** p, std::string ch_str) {
 
 bool TRequest::parse(TBuffer * rb){
     char * p = rb->c_str();
-
     if (is_token(&p, "GET") && skip(&p, " ")) {
         if (is_token(&p, "http://")) while(isnt(&p, '/'));
         if (!is(&p, '/')) return false;
