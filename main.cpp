@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
 
     // PARENT PROCESS. Need to kill it.
     if (process_id > 0) {
-        std::cout << "process_id of child process " << process_id << std::endl;
         exit(0);
     }
 

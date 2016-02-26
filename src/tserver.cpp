@@ -53,7 +53,7 @@ void TServer::close_handlers() {
 void TServer::gc_handlers() {
     for (std::list<HTTPHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++) {
         if ((*it)->is_finished) {
-            std::cout << "HTTP is finished !!!" << std::endl;
+            handlers.remove(*it);
         }
     }
 }
