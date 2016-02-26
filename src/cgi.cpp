@@ -9,7 +9,7 @@
 
 std::string tbad = "400 Bad Request";
 std::string t200 = "HTTP/1.0 200 OK\r\nContent-length: %d\r\nConnection: close\r\nContent-Type: text/html\r\n\r\n%s";
-std::string t404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: text/html\r\nContent-length: 0\r\nConnection: close\r\n\r\n";
+std::string t404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: text/html\r\nContent-length: 9\r\nConnection: close\r\n\r\nNOT_FOUND";
 
 void TCGI::start(TBuffer * rb, TBuffer * wb) {
     TRequest * r = new TRequest(rb);
