@@ -39,8 +39,25 @@ void TServer::start() {
     ev_signal_init(w_signal(), sig_cb, SIGINT);
     ev_signal_start(loop, w_signal());
 
+    // Start threads
+    for (int i = 0; i < THREADS; i++) {
+        threads[i] = new thread_ctx(i);
+        int result = pthread_create(&(threads[i]->thread), NULL, threadFunc, (void*) threads[i]);
+        if(result != 0) {
+            perror("Creating thread error");
+            exit(1);
+        }
+    }
+
     ev_loop(loop, 0);
 
+    // Join threads
+    for (int i = 0; i < THREADS; i++) {
+        thread_ctx * ctx = nullptr;
+        int result = pthread_join(threads[i]->thread, (void **) &ctx);
+        assert(ctx == threads[i]);
+        delete threads[i];
+    }
     return;
 }
 

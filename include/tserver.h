@@ -2,82 +2,102 @@
 
 #include <iostream>
 #include <string>
-#include <list>
+#include <vector>
 
 #include <ev.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <stddef.h>
+
+#include <pthread.h>
 
 #include "http_handler.h"
 
+#define THREADS 4
+
 class TServer;
+#define WIO2SRV(wio) ((TServer*)((char*)wio - offsetof(TServer, w_io)))
+#define WSIG2SRV(wsig) ((TServer*)((char*)wsig - offsetof(TServer, w_sig)))
 
-struct acc_context {
-    struct ev_io io;
-    TServer * srv;
-};
+struct thread_ctx {
+    int id;
+    pthread_t           thread;
+    struct ev_loop *    loop;
+    std::vector<int>    fd_queue;
+    pthread_spinlock_t  spin;
 
-struct sig_context {
-    struct ev_signal sig;
-    TServer * srv;
+    thread_ctx(int id): id(id) {
+        loop = ev_loop_new(0);
+    }
+    ~thread_ctx() {
+        ev_loop_destroy(loop);
+    }
 };
 
 class TServer {
-private:
+public:
     std::string host;
     std::string port;
     std::string folder;
 
-    int                    sock;
+    int                 current_thread;
+    thread_ctx *        threads[THREADS];
 
-    std::list<HTTPHandler *>   handlers;
+    struct ev_io        w_io;
+    struct ev_signal    w_sig;
 
-    struct ev_loop        *loop;
-    struct acc_context    *ctx_accept; // accept
-    struct sig_context    *ctx_signal; // signal
+    int                 sock;
+
+    struct ev_loop *    loop;
 
 public:
-    TServer(const std::string &h, const std::string &p, const std::string &f): host(h), port(p), folder(f), loop(EV_DEFAULT) {
-        ctx_accept = new acc_context;
-        ctx_signal = new sig_context;
-        ctx_accept->srv = this;
-        ctx_signal->srv = this;
-    };
-
     struct ev_io * w_accept() {
-        return (struct ev_io *) ctx_accept;
+        return (struct ev_io *)((char*)this + (offsetof(TServer, w_io)));
     }
 
     struct ev_signal * w_signal() {
-        return (struct ev_signal *) ctx_signal;
+        return (struct ev_signal *)((char*)this + (offsetof(TServer, w_sig)));
     }
 
-    static struct acc_context * ctx(struct ev_io * w) {
-        return (struct acc_context *) w;
+
+    TServer(const std::string &h, const std::string &p, const std::string &f)
+        : host(h)
+        , port(p)
+        , folder(f)
+        , current_thread(0)
+        , loop(EV_DEFAULT)
+    {
     }
 
-    static struct sig_context * ctx(struct ev_signal * w) {
-        return (struct sig_context *) w;
-    }
-
-    virtual ~TServer() {
-        shutdown(sock, SHUT_RDWR);
-        close(sock);
-        delete ctx_accept;
-        delete ctx_signal;
+    ~TServer() {
     }
 
     void start();
 
+    static void * threadFunc(void *arg) {
+        thread_ctx * ctx = (thread_ctx *) arg;
+        ev_loop(ctx->loop, 0);
+        std::cout << "pthread["<< ctx->id <<"] ended looping" << std::endl;
+        return arg;
+    }
+
     static void sig_cb(struct ev_loop *loop, struct ev_signal *w, int revent) {
-        ev_signal_stop(ctx(w)->srv->loop, w);
-        ev_unloop(ctx(w)->srv->loop, EVUNLOOP_ALL);
+        ev_signal_stop(loop, w);
+        ev_unloop(loop, EVUNLOOP_ALL);
     }
 
     static void io_accept_cb(struct ev_loop *loop, struct ev_io *w, int revent) {
+        TServer * srv = WIO2SRV(w);
         int client_sd = accept(w->fd, NULL, NULL);
-        new HTTPHandler(loop, client_sd, ctx(w)->srv->folder);
+
+        pthread_spin_lock (&(srv->threads[srv->current_thread]->spin));
+        (srv->threads[srv->current_thread]->fd_queue).push_back(client_sd);
+        pthread_spin_unlock (&(srv->threads[srv->current_thread]->spin));
+        (srv->current_thread)++;
+
+        std::cerr << "ACCEPT: client_sd = " << client_sd << "; folder = " << srv->folder << std::endl;
+        new HTTPHandler(loop, client_sd, srv->folder);
     }
 
 

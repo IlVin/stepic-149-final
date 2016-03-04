@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include <stddef.h>
 #include <ev.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,74 +16,61 @@
 
 class HTTPHandler;
 
-struct io_context {
-    struct ev_io io;
-    HTTPHandler * h;
-};
-
-static struct ev_io * w(struct io_context * ctx) {
-    return (struct ev_io *) ctx;
-}
-
-static struct io_context * ioctx(struct ev_io * w) {
-    return (struct io_context *) w;
-}
+#define WIO2HND(wio) ((HTTPHandler*)((char*)wio - offsetof(HTTPHandler, w_io)))
 
 class HTTPHandler {
-    private:
-        struct ev_loop     * loop;
-        struct io_context  * rw_ctx; // accept
+    public:
+        std::string     folder;
+        int             sock;
 
-        std::string folder;
+        struct ev_io    w_io;
+        struct ev_loop  * loop;
 
-        int      sock;
-
-        TBuffer  *rb;
-        TBuffer  *wb;
+        TBuffer         *rb;
+        TBuffer         *wb;
 
     public:
-        bool     is_finished;
-
-        HTTPHandler(struct ev_loop * l, int s, std::string f): loop(l), folder(f), sock(s) {
-            rw_ctx = new io_context;
-            rw_ctx->h = this;
-
+        HTTPHandler(struct ev_loop * l, int s, std::string f)
+            : folder(f)
+            , sock(s)
+            , loop(l)
+        {
             rb = new TBuffer();
             wb = new TBuffer();
 
-            is_finished = false;
-
-            ev_init(w(rw_ctx), r_cb);
-            ev_io_set(w(rw_ctx), sock, EV_READ);
-            ev_io_start(loop, w(rw_ctx));
+            ev_init(wio(), r_cb);
+            ev_io_set(wio(), sock, EV_READ);
+            ev_io_start(loop, wio());
         };
 
-        virtual ~HTTPHandler() {
+        ~HTTPHandler() {
             shutdown(sock, SHUT_RDWR);
             close(sock);
-            delete rw_ctx;
             delete rb;
             delete wb;
         }
 
+        struct ev_io * wio() {
+            return (struct ev_io *)((char*)this + (offsetof(HTTPHandler, w_io)));
+        }
 
         static void w_cb(struct ev_loop *loop, struct ev_io *w, int revent) {
-            TBuffer *wb = ioctx(w)->h->wb;
+            TBuffer *wb = WIO2HND(w)->wb;
             int r = wb->snd(w->fd);
             if (r == 0 || r == -1) {
                 ev_io_stop(loop, w);
                 shutdown(w->fd, SHUT_RDWR);
                 close(w->fd);
-                ioctx(w)->h->is_finished = true;
-                delete ioctx(w)->h;
+                delete WIO2HND(w);
             }
             return;
         }
 
         static void r_cb(struct ev_loop *loop, struct ev_io *w, int revent) {
             ev_io_stop(loop, w);
-            TBuffer *rb = ioctx(w)->h->rb;
-            TBuffer *wb = ioctx(w)->h->wb;
+            HTTPHandler * hndl = WIO2HND(w);
+            TBuffer *rb = hndl->rb;
+            TBuffer *wb = hndl->wb;
             int r = rb->rcv(w->fd, 1024);
 
             if (r > 0){
@@ -90,7 +78,7 @@ class HTTPHandler {
                 // No multithreading
                 if (strstr(*p, "\n\n") != nullptr || strstr(*p, "\n\r\n") != nullptr) {
                     ev_io_stop(loop, w);
-                    TCGI * cgi = new TCGI(ioctx(w)->h->folder);
+                    TCGI * cgi = new TCGI(hndl->folder);
                     cgi->start(rb, wb);
                     delete cgi;
                     //response
