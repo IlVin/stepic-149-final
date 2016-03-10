@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
         }
         opt = getopt( argc, argv, OPTSTRING );
     }
-/*
+
     // Create child process
     pid_t process_id = fork();
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
-*/
+
     TServer * srv = new TServer(host, port, folder);
     srv->start();
     delete srv;

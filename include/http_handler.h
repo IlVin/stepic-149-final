@@ -21,7 +21,6 @@ class HTTPHandler;
 class HTTPHandler {
     public:
         std::string     folder;
-        int             sock;
 
         struct ev_io    w_io;
         struct ev_loop  * loop;
@@ -30,9 +29,8 @@ class HTTPHandler {
         TBuffer         *wb;
 
     public:
-        HTTPHandler(struct ev_loop * l, int s, std::string f)
+        HTTPHandler(struct ev_loop * l, int sock, std::string f)
             : folder(f)
-            , sock(s)
             , loop(l)
         {
             rb = new TBuffer();
@@ -44,8 +42,6 @@ class HTTPHandler {
         };
 
         ~HTTPHandler() {
-            shutdown(sock, SHUT_RDWR);
-            close(sock);
             delete rb;
             delete wb;
         }

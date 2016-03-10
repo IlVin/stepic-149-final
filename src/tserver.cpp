@@ -41,7 +41,7 @@ void TServer::start() {
 
     // Start threads
     for (int i = 0; i < THREADS; i++) {
-        threads[i] = new thread_ctx(i);
+        threads[i] = new TCTX(i, folder);
         int result = pthread_create(&(threads[i]->thread), NULL, threadFunc, (void*) threads[i]);
         if(result != 0) {
             perror("Creating thread error");
@@ -53,7 +53,7 @@ void TServer::start() {
 
     // Join threads
     for (int i = 0; i < THREADS; i++) {
-        thread_ctx * ctx = nullptr;
+        TCTX * ctx = nullptr;
         int result = pthread_join(threads[i]->thread, (void **) &ctx);
         assert(ctx == threads[i]);
         delete threads[i];
